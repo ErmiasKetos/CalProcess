@@ -329,7 +329,6 @@ def init_styling():
     .verification-good {
         background-color: #d4edda;
         color: #155724;
-        padding: 1rem;
         border-radius: 0.5rem;
         text-align: center;
     }
