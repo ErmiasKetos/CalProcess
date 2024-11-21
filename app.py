@@ -41,17 +41,6 @@ def interpret_slope_data(slope_data):
     except Exception:
         return "Error interpreting slope data. Please ensure the data format is correct."
 
-# Function to simulate current readings
-def get_current_reading(probe_type):
-    if probe_type == "pH":
-        return round(random.uniform(6.5, 7.5), 2)  # Simulated pH reading
-    elif probe_type == "EC":
-        return round(random.uniform(1.0, 1.5), 3)  # Simulated EC reading in mS
-    elif probe_type == "Temperature":
-        return round(random.uniform(24.0, 26.0), 1)  # Simulated Temp in °C
-    elif probe_type == "DO":
-        return round(random.uniform(7.5, 9.0), 2)  # Simulated DO in mg/L
-    return "No reading"
 
 # CSS for Styling
 st.markdown(
@@ -110,7 +99,7 @@ st.markdown(
 )
 
 # Main Streamlit App
-st.title("🌡️ Atlas Scientific Probe Calibration")
+st.title(" Atlas Scientific Probe Calibration")
 
 # Sidebar Connection and Status
 st.sidebar.title("Device Status")
