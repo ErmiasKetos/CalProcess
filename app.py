@@ -4,9 +4,15 @@ import serial.tools.list_ports
 import time
 
 # Function to list available serial ports
+
 def list_serial_ports():
-    ports = serial.tools.list_ports.comports()
-    return [port.device for port in ports]
+    try:
+        ports = serial.tools.list_ports.comports()
+        return [port.device for port in ports if port.device]
+    except Exception as e:
+        st.error(f"Error listing ports: {e}")
+        return []
+
 
 # Function to establish connection with the Whitebox T1
 
