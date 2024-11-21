@@ -44,33 +44,33 @@ class ConnectionHandler:
             return None
 
     def scan_ports(self):
-    """Scan all potential ports in parallel"""
-    potential_ports = self.get_potential_ports()
-    available_ports = []
-    
-    if not potential_ports:
-        return []
+        """Scan all potential ports in parallel"""
+        potential_ports = self.get_potential_ports()
+        available_ports = []
         
-    progress_text = "Scanning ports..."
-    progress_bar = st.sidebar.progress(0)
-    
-    # Ensure at least 1 worker, maximum 4 workers
-    max_workers = min(max(1, len(potential_ports)), 4)
-    
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(self.check_port, port): port 
-                  for port in potential_ports}
-        
-        for i, future in enumerate(as_completed(futures)):
-            progress = (i + 1) / len(potential_ports)
-            progress_bar.progress(progress)
+        if not potential_ports:
+            return []
             
-            result = future.result()
-            if result:
-                available_ports.append(result)
-    
-    progress_bar.empty()
-    return available_ports
+        progress_text = "Scanning ports..."
+        progress_bar = st.sidebar.progress(0)
+        
+        # Ensure at least 1 worker, maximum 4 workers
+        max_workers = min(max(1, len(potential_ports)), 4)
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(self.check_port, port): port 
+                      for port in potential_ports}
+            
+            for i, future in enumerate(as_completed(futures)):
+                progress = (i + 1) / len(potential_ports)
+                progress_bar.progress(progress)
+                
+                result = future.result()
+                if result:
+                    available_ports.append(result)
+        
+        progress_bar.empty()
+        return available_ports
 
     def scan_ports(self):
         """Scan all potential ports in parallel"""
