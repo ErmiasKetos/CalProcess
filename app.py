@@ -45,7 +45,7 @@ st.markdown("<h1 style='text-align: center;'>Atlas Scientific Probe Calibration<
 
 # Sidebar Port Testing
 st.sidebar.title("Port Testing")
-setup_port_testing()
+setup_port_testing(key_prefix="sidebar")
 
 # Main App Tabs
 st.markdown("<div class='card'><h3>Probes</h3></div>", unsafe_allow_html=True)
@@ -53,16 +53,16 @@ tab1, tab2, tab3, tab4 = st.tabs(["pH", "EC", "DO", "Temperature"])
 
 with tab1:
     st.markdown("<div class='card'><h3>pH Probe Calibration</h3></div>", unsafe_allow_html=True)
-    pH_calibration()
+    pH_calibration(key_prefix="ph")
 
 with tab2:
     st.markdown("<div class='card'><h3>Electrical Conductivity Calibration</h3></div>", unsafe_allow_html=True)
-    EC_calibration()
+    EC_calibration(key_prefix="ec")
 
 with tab3:
     st.markdown("<div class='card'><h3>Dissolved Oxygen Calibration</h3></div>", unsafe_allow_html=True)
-    DO_calibration()
+    DO_calibration(key_prefix="do")
 
 with tab4:
     st.markdown("<div class='card'><h3>Temperature Probe Calibration</h3></div>", unsafe_allow_html=True)
-    temperature_calibration()
+    temperature_calibration(key_prefix="temp")
