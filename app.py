@@ -59,6 +59,8 @@ if 'readings' not in st.session_state:
     }
 if 'reading_active' not in st.session_state:
     st.session_state['reading_active'] = False
+if 'last_reading_time' not in st.session_state:
+    st.session_state['last_reading_time'] = None
 
 def list_serial_ports():
     """List all available serial ports"""
@@ -112,6 +114,7 @@ def disconnect_device():
             time.sleep(0.5)  # Allow reading thread to stop
             st.session_state['serial_connection'].close()
             st.session_state['serial_connection'] = None
+            st.session_state['last_reading_time'] = None
             st.sidebar.success("Disconnected successfully")
         except Exception as e:
             st.sidebar.error(f"Error disconnecting: {e}")
@@ -148,9 +151,13 @@ def update_readings(probe_type, value):
     try:
         value = float(value)
         st.session_state['readings'][probe_type].append(value)
-        st.session_state['readings']['timestamps'].append(datetime.now())
-    except:
-        pass
+        current_time = datetime.now()
+        st.session_state['readings']['timestamps'].append(current_time)
+        st.session_state['last_reading_time'] = current_time
+    except ValueError as e:
+        st.error(f"Invalid reading value: {e}")
+    except Exception as e:
+        st.error(f"Error updating readings: {e}")
 
 def create_reading_card(title, value, unit, timestamp=None):
     """Create a styled card for readings"""
@@ -167,14 +174,50 @@ def continuous_reading(ser, probe_type):
     """Continuously read from the probe"""
     while st.session_state['reading_active']:
         try:
+            if not ser or not ser.is_open:
+                st.error("Serial connection lost")
+                st.session_state['reading_active'] = False
+                break
+                
             response = send_command(ser, "R")
             if response:
                 update_readings(probe_type, response[0])
-            time.sleep(3)  # Wait 3 seconds between readings
+                
+            # Check if it's time to log data
+            current_time = datetime.now()
+            if st.session_state.get('last_reading_time'):
+                time_diff = (current_time - st.session_state['last_reading_time']).total_seconds()
+                if time_diff < 3:  # Wait for remainder of 3 seconds
+                    time.sleep(3 - time_diff)
+            else:
+                time.sleep(3)
+                
         except Exception as e:
             st.error(f"Reading error: {e}")
+            st.session_state['reading_active'] = False
             break
-=====
+
+def get_reading_statistics(probe_type):
+    """Calculate statistics for readings"""
+    if not st.session_state['readings'][probe_type]:
+        return None
+        
+    readings = list(st.session_state['readings'][probe_type])
+    return {
+        'min': min(readings),
+        'max': max(readings),
+        'avg': sum(readings) / len(readings),
+        'count': len(readings)
+    }
+
+def clear_readings(probe_type=None):
+    """Clear readings from session state"""
+    if probe_type:
+        st.session_state['readings'][probe_type].clear()
+    else:
+        for key in st.session_state['readings']:
+            st.session_state['readings'][key].clear()
+    st.session_state['last_reading_time'] = None
 # Sidebar - Device Connection
 st.sidebar.title("Device Connection")
 available_ports = list_serial_ports()
