@@ -324,3 +324,39 @@ def apply_plot_style(fig):
 def init_styling():
     """Initialize all styling for the app"""
     AppStyle.apply_style()
+
+/* Verification cards */
+    .verification-good {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+    }
+    
+    .verification-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+    }
+    
+    .verification-good .value,
+    .verification-warning .value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .verification-good .status,
+    .verification-warning .status {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .verification-good .range,
+    .verification-warning .range {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
