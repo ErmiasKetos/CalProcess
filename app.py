@@ -7,32 +7,55 @@ import time
 def list_serial_ports():
     try:
         ports = serial.tools.list_ports.comports()
-        st.write("Detected Ports: ", [port.device for port in ports])
-        return [port.device for port in ports if port.device]
+        st.write("Debug: Detected Ports", [(p.device, p.description) for p in ports])
+        return [port.device for port in ports]
     except Exception as e:
         st.error(f"Error listing ports: {e}")
         return []
 
 # Connect to the selected port
-
 def connect_to_device(port):
     try:
-        if 'ser' in st.session_state and st.session_state['ser'].is_open:
-            return st.session_state['ser']  # Reuse existing connection
         ser = serial.Serial(port, 9600, timeout=1)
-        st.session_state['ser'] = ser
-        time.sleep(2)
+        time.sleep(2)  # Allow device to stabilize
         st.sidebar.success(f"Connected to {port}")
         return ser
     except Exception as e:
         st.sidebar.error(f"Failed to connect: {e}")
         return None
 
+# Sidebar for device connection
+st.sidebar.title("Device Connection")
+ports = list_serial_ports()
 
-# Attempt to connect
-ser = connect_to_device("COM6")
-if ser and ser.is_open:
-    st.sidebar.success("Connected to COM6!")
+# Add COM6 as fallback if no ports detected
+if not ports:
+    st.warning("No ports detected. Forcing COM6 as fallback.")
+    ports = ["COM6"]
+
+selected_port = st.sidebar.selectbox("Select Port", ports)
+
+# Connect to device
+if st.sidebar.button("🔗 Connect Device"):
+    ser = connect_to_device(selected_port)
+    if ser and ser.is_open:
+        st.sidebar.success("Device connected successfully!")
+    else:
+        st.sidebar.error("Failed to open the selected port.")
+else:
+    ser = None
+
+# Test command
+if ser:
+    if st.sidebar.button("🔍 Scan for EZO Devices"):
+        try:
+            ser.write("I2C,scan\r".encode())
+            time.sleep(0.5)
+            response = ser.readlines()
+            st.sidebar.info("Devices Found:\n" + "\n".join([r.decode().strip() for r in response]))
+        except Exception as e:
+            st.sidebar.error(f"Error sending command: {e}")
+
 
 
 # Sidebar for port selection
