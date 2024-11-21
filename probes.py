@@ -21,18 +21,18 @@ def send_command(ser, command):
 
 # Port Testing Setup
 def setup_port_testing():
-ports = list_serial_ports()
-selected_port = st.sidebar.selectbox("Select Port", ports, key="port_selectbox")
-
-if st.sidebar.button("Test Port Connection", key="test_port_button"):
-    try:
-        ser = serial.Serial(selected_port, 9600, timeout=1)
-        time.sleep(2)  # Allow connection to stabilize
-        st.sidebar.success("Connected successfully!")
-        return ser
-    except Exception as e:
-        st.sidebar.error(f"Connection failed: {e}")
-        return None
+    ports = list_serial_ports()
+    selected_port = st.sidebar.selectbox("Select Port", ports, key="port_selectbox")
+    
+    if st.sidebar.button("Test Port Connection", key="test_port_button"):
+        try:
+            ser = serial.Serial(selected_port, 9600, timeout=1)
+            time.sleep(2)  # Allow connection to stabilize
+            st.sidebar.success("Connected successfully!")
+            return ser
+        except Exception as e:
+            st.sidebar.error(f"Connection failed: {e}")
+            return None
 
 
 # pH Calibration
