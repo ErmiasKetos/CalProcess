@@ -1,99 +1,102 @@
-
 import streamlit as st
 import serial
+import serial.tools.list_ports
 import time
 
-# Configuration for serial communication
-SERIAL_PORT = 'COM3'  # Update with your Arduino's serial port
-BAUD_RATE = 9600
+# Helper function to get available serial ports
+def list_serial_ports():
+    ports = serial.tools.list_ports.comports()
+    return [port.device for port in ports]
 
-# Connect to Arduino
-@st.cache_resource
-def get_serial_connection():
-    try:
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
-        time.sleep(2)  # Wait for the connection to stabilize
-        return ser
-    except Exception as e:
-        st.error(f"Error connecting to Arduino: {e}")
-        return None
-
-# Send a command to the Arduino and get a response
+# Function to send commands to Arduino
 def send_command(ser, command):
     try:
-        ser.write((command + "\r").encode())  # Send command
-        time.sleep(0.5)  # Allow time for response
+        ser.write((command + "\r").encode())
+        time.sleep(0.5)
         response = ser.readlines()
         return [line.decode().strip() for line in response]
     except Exception as e:
-        st.error(f"Error communicating with Arduino: {e}")
+        st.error(f"Error communicating with device: {e}")
         return []
 
-# Streamlit app layout
-st.title("EZO Device Calibration")
+# Streamlit GUI
+st.title("Atlas Scientific Probe Calibration")
 
-# Serial connection
-ser = get_serial_connection()
-if ser:
-    st.success("Connected to Arduino!")
-else:
-    st.stop()
+# Sidebar for Port Testing
+st.sidebar.header("Port Testing")
+ports = list_serial_ports()
+selected_port = st.sidebar.selectbox("Select Port", ports)
 
-# Select the EZO device
-st.sidebar.title("Device Selection")
-device_type = st.sidebar.selectbox("Choose a sensor type:", [
-    "pH", "Dissolved Oxygen (DO)", "Electrical Conductivity (EC)", 
-    "Temperature (RTD)", "Oxidation-Reduction Potential (ORP)"
-])
+if st.sidebar.button("Test Port Connection"):
+    try:
+        ser = serial.Serial(selected_port, 9600, timeout=1)
+        time.sleep(2)  # Allow connection to stabilize
+        st.sidebar.success("Connected successfully!")
+    except Exception as e:
+        st.sidebar.error(f"Connection failed: {e}")
 
-# Commands and actions
-if st.sidebar.button("List Devices"):
-    st.sidebar.write("Listing available devices...")
-    response = send_command(ser, "!list")
-    st.sidebar.write(response)
+# Main GUI Tabs
+tab1, tab2, tab3, tab4 = st.tabs(["pH", "EC", "DO", "Temperature"])
 
-# Calibration workflow
-st.header("Calibration Workflow")
+# pH Calibration Tab
+with tab1:
+    st.subheader("pH Probe Calibration")
+    mid_value = st.number_input("Midpoint Calibration (e.g., pH 7.00)", value=7.00, step=0.01)
+    low_value = st.number_input("Low Calibration (e.g., pH 4.00)", value=4.00, step=0.01)
+    high_value = st.number_input("High Calibration (e.g., pH 10.00)", value=10.00, step=0.01)
 
-if device_type == "pH":
-    st.subheader("pH Calibration")
-    mid_value = st.number_input("Midpoint (e.g., 7.00)", value=7.00, step=0.01)
-    if st.button("Calibrate Midpoint"):
+    if st.button("Calibrate pH 7 (Mid)"):
         response = send_command(ser, f"Cal,mid,{mid_value}")
-        st.write(response)
-elif device_type == "Dissolved Oxygen (DO)":
-    st.subheader("Dissolved Oxygen Calibration")
-    if st.button("Air Calibration"):
-        response = send_command(ser, "Cal")
-        st.write(response)
-elif device_type == "Electrical Conductivity (EC)":
-    st.subheader("Electrical Conductivity Calibration")
+        st.write("Response:", response)
+
+    if st.button("Calibrate pH 4 (Low)"):
+        response = send_command(ser, f"Cal,low,{low_value}")
+        st.write("Response:", response)
+
+    if st.button("Calibrate pH 10 (High)"):
+        response = send_command(ser, f"Cal,high,{high_value}")
+        st.write("Response:", response)
+
+    if st.button("Clear pH Calibration"):
+        response = send_command(ser, "Cal,clear")
+        st.write("Response:", response)
+
+    if st.button("Get pH Slope"):
+        response = send_command(ser, "Slope,?")
+        st.write("Slope Values:", response)
+
+# EC Calibration Tab
+with tab2:
+    st.subheader("EC Probe Calibration")
     ec_value = st.number_input("Calibration Solution (µS/cm)", value=1413, step=1)
     if st.button("Calibrate EC"):
         response = send_command(ser, f"Cal,{ec_value}")
-        st.write(response)
-elif device_type == "Temperature (RTD)":
-    st.subheader("Temperature Calibration")
-    temp_value = st.number_input("Temperature (°C)", value=25.0, step=0.1)
+        st.write("Response:", response)
+
+# DO Calibration Tab
+with tab3:
+    st.subheader("DO Probe Calibration")
+    if st.button("Air Calibration"):
+        response = send_command(ser, "Cal")
+        st.write("Response:", response)
+
+# Temperature Calibration Tab
+with tab4:
+    st.subheader("Temperature Probe Calibration")
+    temp_value = st.number_input("Calibration Temperature (°C)", value=25.0, step=0.1)
     if st.button("Calibrate Temperature"):
         response = send_command(ser, f"Cal,{temp_value}")
-        st.write(response)
-elif device_type == "Oxidation-Reduction Potential (ORP)":
-    st.subheader("ORP Calibration")
-    orp_value = st.number_input("Calibration Solution (mV)", value=475, step=1)
-    if st.button("Calibrate ORP"):
-        response = send_command(ser, f"Cal,{orp_value}")
-        st.write(response)
+        st.write("Response:", response)
 
-# Temperature compensation
-st.subheader("Temperature Compensation")
-temp_comp = st.number_input("Set Temperature Compensation (°C)", value=25.0, step=0.1)
+# Temperature Compensation
+st.subheader("Set Temperature Compensation")
+temp_comp = st.number_input("Temperature Compensation (°C)", value=25.0, step=0.1)
 if st.button("Set Temperature Compensation"):
     response = send_command(ser, f"T,{temp_comp}")
-    st.write(response)
+    st.write("Response:", response)
 
-# Take a reading
-st.subheader("Take a Sensor Reading")
-if st.button("Read Value"):
+# Take a Reading
+st.subheader("Take Sensor Reading")
+if st.button("Read Sensor Value"):
     response = send_command(ser, "R")
     st.write("Sensor Reading:", response)
