@@ -11,6 +11,8 @@ from styles import AppStyle, apply_plot_style, init_styling
 from utils import SerialManager, DataLogger, DeviceManager
 from setup_utils import WhiteboxSetup
 from protocol_utils import ProtocolManager
+from setup_utils import WhiteboxSetup
+
 
 class WhiteboxEZOApp:
     DEFAULT_ADDRESSES = {
