@@ -4,6 +4,7 @@ import platform
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+from glob import glob
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,6 +17,42 @@ class ConnectionHandler:
             'DO': False,
             'RTD': False
         }
+
+    def get_potential_ports(self):
+        """Get list of potential ports based on operating system"""
+        system = platform.system()
+        
+        if system == "Windows":
+            return [f"COM{i}" for i in range(1, 21)]
+            
+        elif system == "Linux":
+            try:
+                patterns = ["/dev/ttyUSB*", "/dev/ttyACM*", "/dev/ttyS*"]
+                ports = []
+                for pattern in patterns:
+                    ports.extend(glob(pattern))
+                return ports or []
+            except Exception as e:
+                st.sidebar.error(f"Error scanning Linux ports: {str(e)}")
+                return []
+                
+        elif system == "Darwin":  # macOS
+            try:
+                patterns = [
+                    "/dev/tty.usbserial*",
+                    "/dev/tty.usbmodem*",
+                    "/dev/cu.usbserial*",
+                    "/dev/cu.usbmodem*"
+                ]
+                ports = []
+                for pattern in patterns:
+                    ports.extend(glob(pattern))
+                return ports or []
+            except Exception as e:
+                st.sidebar.error(f"Error scanning macOS ports: {str(e)}")
+                return []
+                
+        return []
 
     def check_port(self, port):
         """Test if a port is available and responsive"""
@@ -58,29 +95,6 @@ class ConnectionHandler:
         max_workers = min(max(1, len(potential_ports)), 4)
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(self.check_port, port): port 
-                      for port in potential_ports}
-            
-            for i, future in enumerate(as_completed(futures)):
-                progress = (i + 1) / len(potential_ports)
-                progress_bar.progress(progress)
-                
-                result = future.result()
-                if result:
-                    available_ports.append(result)
-        
-        progress_bar.empty()
-        return available_ports
-
-    def scan_ports(self):
-        """Scan all potential ports in parallel"""
-        potential_ports = self.get_potential_ports()
-        available_ports = []
-        
-        progress_text = "Scanning ports..."
-        progress_bar = st.sidebar.progress(0)
-        
-        with ThreadPoolExecutor(max_workers=min(len(potential_ports), 10)) as executor:
             futures = {executor.submit(self.check_port, port): port 
                       for port in potential_ports}
             
