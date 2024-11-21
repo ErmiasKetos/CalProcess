@@ -12,8 +12,11 @@ def list_serial_ports():
 # Function to send a command to the device
 def send_command(command):
     # Simulate sending a command (replace with actual serial communication if needed)
-    time.sleep(0.5)  # Simulate delay
-    if command == "Slope,?":
+    time.sleep(0.5)
+    if command == "I2C,scan":
+        # Simulated response for scanning devices
+        return "98: EZO ORP Circuit\n99: EZO pH Circuit\n100: EZO EC Circuit"
+    elif command == "Slope,?":
         # Simulated slope data
         return "Slope,99.7,100.3,-0.89"
     return f"Command sent: {command}"
@@ -50,16 +53,27 @@ def get_current_reading(probe_type):
         return round(random.uniform(7.5, 9.0), 2)  # Simulated DO in mg/L
     return "No reading"
 
-# CSS for Tailwind-Inspired Styling
+# CSS for Styling
 st.markdown(
     """
     <style>
     .card {
-        background-color: #ffffff;
+        background-color: #f9fafb;
         padding: 20px;
         margin-bottom: 20px;
         border-radius: 10px;
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .current-reading-box {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2563eb;
+        background-color: #e0f2fe;
+        padding: 20px;
+        border: 3px solid #2563eb;
+        border-radius: 10px;
+        text-align: center;
+        margin: 20px 0;
     }
     .btn-primary {
         background-color: #2563eb;
@@ -83,12 +97,12 @@ st.markdown(
     .btn-danger:hover {
         background-color: #b91c1c;
     }
-    .metric {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        font-weight: bold;
-        margin-bottom: 15px;
+    .status-box {
+        background-color: #e5e7eb;
+        padding: 10px;
+        border-left: 5px solid #10b981;
+        border-radius: 5px;
+        margin-bottom: 10px;
     }
     </style>
     """,
@@ -98,20 +112,33 @@ st.markdown(
 # Main Streamlit App
 st.title("🌡️ Atlas Scientific Probe Calibration")
 
-# Sidebar Connection Status
-st.sidebar.title("Device Connection")
+# Sidebar Connection and Status
+st.sidebar.title("Device Status")
 connection_status = st.sidebar.empty()
 connected = st.sidebar.button("🔗 Connect Device")
 
 if connected:
     connection_status.success("✅ Device Connected!")
+    st.sidebar.markdown(
+        """
+        <div class="status-box">
+            <p><strong>Status:</strong> You can now use the EZO Console.</p>
+            <p><strong>Note:</strong> Open the Arduino IDE serial monitor @9600 baud.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    # Scan for EZO Devices
+    if st.sidebar.button("🔍 Scan for EZO Devices"):
+        response = send_command("I2C,scan")
+        st.sidebar.info(f"Devices Found:\n{response}")
 else:
     connection_status.info("❌ Device Not Connected")
 
 # Tabs for probe calibration
 tab = st.selectbox("Select Probe Type", ["pH", "EC", "Temperature", "DO"])
 
-# Dynamic current reading (updates every second)
+# Dynamic current reading box
 st.markdown('<div class="card">', unsafe_allow_html=True)
 st.markdown(f"<h3>📊 {tab} Probe Current Reading</h3>", unsafe_allow_html=True)
 current_reading = st.empty()
@@ -120,24 +147,15 @@ current_reading = st.empty()
 for _ in range(5):  # Simulate 5 updates; replace with `while True` if needed
     with current_reading:
         reading = get_current_reading(tab)
-        if tab == "EC":
-            st.metric(label=f"Current {tab} Reading", value=f"{reading} mS")
-        elif tab == "Temperature":
-            st.metric(label=f"Current {tab} Reading", value=f"{reading} °C")
-        elif tab == "DO":
-            st.metric(label=f"Current {tab} Reading", value=f"{reading} mg/L")
-        else:
-            st.metric(label=f"Current {tab} Reading", value=f"{reading}")
+        st.markdown(
+            f'<div class="current-reading-box">{reading}</div>',
+            unsafe_allow_html=True,
+        )
     time.sleep(1)
 
 # Calibration Panels
 if tab == "pH":
     st.markdown("<h3>🧪 pH Probe Calibration</h3>", unsafe_allow_html=True)
-
-    # Temperature Measurement for Calibration
-    if st.button("Measure Temperature for Calibration"):
-        temperature = get_current_reading("Temperature")
-        st.success(f"Measured Temperature: {temperature} °C")
 
     if st.button("Calibrate pH 7 (Mid)", key="ph_mid"):
         response = send_command("ph:cal,mid,7")
@@ -175,20 +193,6 @@ elif tab == "EC":
             st.success(response)
         if st.button("Calibrate 1413µS"):
             response = send_command("ec:cal,high,1413")
-            st.success(response)
-    elif selected_k_value == "1.0":
-        if st.button("Calibrate 12880µS"):
-            response = send_command("ec:cal,low,12880")
-            st.success(response)
-        if st.button("Calibrate 80000µS"):
-            response = send_command("ec:cal,high,80000")
-            st.success(response)
-    elif selected_k_value == "10.0":
-        if st.button("Calibrate 12880µS"):
-            response = send_command("ec:cal,low,12880")
-            st.success(response)
-        if st.button("Calibrate 150000µS"):
-            response = send_command("ec:cal,high,150000")
             st.success(response)
 
     if st.button("Clear EC Calibration"):
