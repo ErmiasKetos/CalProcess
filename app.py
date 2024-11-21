@@ -359,15 +359,24 @@ with tab_cal:
 
         # Add other probe calibration options here...
 
+
 # Data Tab
 with tab_data:
-    if st.session_state['readings'][probe_type]:
-        st.subheader("Recorded Data")
+    # First select the probe type
+    selected_probe_type = st.selectbox(
+        "Select Probe Type for Data",
+        ["pH", "EC", "DO", "RTD"],
+        key='data_probe_select'
+    )
+    
+    # Then use the selected probe type for data display
+    if st.session_state['readings'][selected_probe_type]:
+        st.subheader(f"Recorded Data for {selected_probe_type}")
         
         # Convert readings to DataFrame
         df = pd.DataFrame({
             'Timestamp': list(st.session_state['readings']['timestamps']),
-            'Value': list(st.session_state['readings'][probe_type])
+            'Value': list(st.session_state['readings'][selected_probe_type])
         })
         
         st.dataframe(df)
@@ -378,8 +387,27 @@ with tab_data:
             st.download_button(
                 "Download CSV",
                 csv,
-                f"{probe_type}_readings_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                f"{selected_probe_type}_readings_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 "text/csv"
             )
+            
+        # Add statistics
+        st.subheader("Statistics")
+        stats = get_reading_statistics(selected_probe_type)
+        if stats:
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Minimum", f"{stats['min']:.2f}")
+            with col2:
+                st.metric("Maximum", f"{stats['max']:.2f}")
+            with col3:
+                st.metric("Average", f"{stats['avg']:.2f}")
+            with col4:
+                st.metric("Count", stats['count'])
+                
+        # Clear data button
+        if st.button("Clear Data"):
+            clear_readings(selected_probe_type)
+            st.success(f"Cleared all readings for {selected_probe_type}")
     else:
-        st.info("No data recorded yet.")
+        st.info(f"No data recorded yet for {selected_probe_type}")
