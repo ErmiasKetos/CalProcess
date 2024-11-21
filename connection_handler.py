@@ -5,8 +5,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 from glob import glob
+import sys
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)  # Changed to DEBUG for more info
 logger = logging.getLogger(__name__)
 
 class ConnectionHandler:
@@ -21,20 +22,41 @@ class ConnectionHandler:
     def get_potential_ports(self):
         """Get list of potential ports based on operating system"""
         system = platform.system()
+        st.sidebar.write(f"Detected Operating System: {system}")
         
+        ports = []
         if system == "Windows":
-            return [f"COM{i}" for i in range(1, 21)]
+            # Check both COM ports and USB devices
+            for i in range(1, 21):
+                ports.append(f"COM{i}")
             
+            # Add additional Windows-specific USB device patterns
+            try:
+                from serial.tools import list_ports
+                for port in list_ports.comports():
+                    if port.device not in ports:
+                        ports.append(port.device)
+                        st.sidebar.write(f"Found port: {port.device} - {port.description}")
+            except Exception as e:
+                st.sidebar.warning(f"Error scanning Windows ports: {str(e)}")
+                
         elif system == "Linux":
             try:
-                patterns = ["/dev/ttyUSB*", "/dev/ttyACM*", "/dev/ttyS*"]
-                ports = []
+                # Common Linux port patterns
+                patterns = [
+                    "/dev/ttyUSB*",
+                    "/dev/ttyACM*",
+                    "/dev/ttyS*",
+                    "/dev/ttyXRUSB*",
+                    "/dev/serial/by-id/*"
+                ]
                 for pattern in patterns:
-                    ports.extend(glob(pattern))
-                return ports or []
+                    matching_ports = glob(pattern)
+                    ports.extend(matching_ports)
+                    if matching_ports:
+                        st.sidebar.write(f"Found ports matching {pattern}: {matching_ports}")
             except Exception as e:
-                st.sidebar.error(f"Error scanning Linux ports: {str(e)}")
-                return []
+                st.sidebar.warning(f"Error scanning Linux ports: {str(e)}")
                 
         elif system == "Darwin":  # macOS
             try:
@@ -42,53 +64,104 @@ class ConnectionHandler:
                     "/dev/tty.usbserial*",
                     "/dev/tty.usbmodem*",
                     "/dev/cu.usbserial*",
-                    "/dev/cu.usbmodem*"
+                    "/dev/cu.usbmodem*",
+                    "/dev/tty.SLAB_USBtoUART*"
                 ]
-                ports = []
                 for pattern in patterns:
-                    ports.extend(glob(pattern))
-                return ports or []
+                    matching_ports = glob(pattern)
+                    ports.extend(matching_ports)
+                    if matching_ports:
+                        st.sidebar.write(f"Found ports matching {pattern}: {matching_ports}")
             except Exception as e:
-                st.sidebar.error(f"Error scanning macOS ports: {str(e)}")
-                return []
-                
-        return []
-
-    def check_port(self, port):
-        """Test if a port is available and responsive"""
-        try:
-            ser = serial.Serial(port, 9600, timeout=1)
-            time.sleep(0.2)
+                st.sidebar.warning(f"Error scanning macOS ports: {str(e)}")
+        
+        # Debug output
+        if ports:
+            st.sidebar.write("Available ports:", ports)
+        else:
+            st.sidebar.warning("No ports found automatically")
             
-            # Try to get device info
+        return list(set(ports))  # Remove duplicates
+
+    def verify_port_exists(self, port):
+        """Verify if a port exists in the system"""
+        try:
+            if platform.system() == "Windows":
+                # For Windows, try to open the port directly
+                try:
+                    ser = serial.Serial(port, 9600, timeout=1)
+                    ser.close()
+                    return True
+                except:
+                    return False
+            else:
+                # For Unix-like systems, check if the device file exists
+                import os
+                return os.path.exists(port)
+        except Exception as e:
+            st.sidebar.error(f"Error verifying port {port}: {str(e)}")
+            return False
+
+    def connect_to_port(self, port):
+        """Establish connection to selected port with enhanced error handling"""
+        try:
+            # First verify port exists
+            if not self.verify_port_exists(port):
+                st.sidebar.error(f"Port {port} does not exist in the system")
+                return None
+
+            st.sidebar.info(f"Attempting to connect to {port}...")
+            
+            # Try to connect
+            ser = serial.Serial(
+                port=port,
+                baudrate=9600,
+                timeout=1,
+                write_timeout=1
+            )
+            
+            # Wait for Arduino to reset
+            time.sleep(2)
+            st.sidebar.info("Port opened, testing communication...")
+            
+            # Clear any pending data
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
+            
+            # Test communication
             ser.write(b"i\r")
-            time.sleep(0.2)
+            time.sleep(0.5)
             
             if ser.in_waiting:
                 response = ser.readline().decode().strip()
-                description = f"Active device (Response: {response})"
+                st.sidebar.success(f"Device responded: {response}")
+                return ser
             else:
-                description = "Port available (No response)"
+                ser.close()
+                st.sidebar.error("No response from device")
+                return None
                 
-            ser.close()
-            return {
-                "port": port,
-                "description": description,
-                "status": "active" if 'response' in locals() else "available"
-            }
+        except serial.SerialException as e:
+            st.sidebar.error(f"Serial connection error: {str(e)}")
+            if "Permission denied" in str(e):
+                st.sidebar.error("Permission denied. On Linux/Mac, try: sudo chmod 666 " + port)
+            elif "already in use" in str(e):
+                st.sidebar.error("Port is already in use by another program")
+            return None
         except Exception as e:
-            logger.debug(f"Port {port} check failed: {str(e)}")
+            st.sidebar.error(f"Unexpected error: {str(e)}")
             return None
 
     def scan_ports(self):
-        """Scan all potential ports in parallel"""
+        """Scan all potential ports in parallel with better feedback"""
         potential_ports = self.get_potential_ports()
         available_ports = []
         
         if not potential_ports:
+            st.sidebar.warning("No potential ports found to scan")
             return []
             
-        progress_text = "Scanning ports..."
+        st.sidebar.info(f"Scanning {len(potential_ports)} potential ports...")
         progress_bar = st.sidebar.progress(0)
         
         # Ensure at least 1 worker, maximum 4 workers
@@ -102,12 +175,19 @@ class ConnectionHandler:
                 progress = (i + 1) / len(potential_ports)
                 progress_bar.progress(progress)
                 
-                result = future.result()
-                if result:
-                    available_ports.append(result)
+                port = futures[future]
+                try:
+                    result = future.result()
+                    if result:
+                        available_ports.append(result)
+                        st.sidebar.success(f"Found active port: {port}")
+                except Exception as e:
+                    st.sidebar.error(f"Error scanning {port}: {str(e)}")
         
         progress_bar.empty()
         return available_ports
+
+    # ... rest of the ConnectionHandler class methods remain the same ...
 
     def connect_to_port(self, port):
         """Establish connection to selected port"""
