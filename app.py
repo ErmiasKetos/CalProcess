@@ -108,9 +108,9 @@ class WhiteboxEZOApp:
 
         # Connection status
         if st.session_state.connected:
-            AppStyle.status_indicator(True)
+            st.success("🟢 Connected")
         else:
-            AppStyle.status_indicator(False)
+            st.error("🔴 Disconnected")
 
         # Port selection and connection
         port = st.sidebar.text_input("Serial Port", "/dev/ttyUSB0")
