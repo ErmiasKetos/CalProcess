@@ -83,9 +83,11 @@ class WhiteboxEZOApp:
             "🔧 Calibration",
             "📈 Analysis",
             "📝 Logs"
+            "⚙️ Settings",
+            "🔌 Setup"  # New tab
         ])
 
-        with tabs[0]:
+        with tabs[5]:
             self.render_dashboard()
         with tabs[1]:
             self.render_calibration()
