@@ -22,9 +22,9 @@ class AppStyle:
         'rtd': '#d62728'
     }
 
-    # Custom CSS
-    CUSTOM_CSS = """
-        <style>
+    # Custom CSS as a single string
+    CUSTOM_CSS = '''
+    <style>
         /* Main container styling */
         .main {
             background-color: #f8f9fa;
@@ -56,14 +56,6 @@ class AppStyle:
         .stButton button:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Metric styling */
-        .css-1xarl3l {
-            background-color: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         /* Device cards */
@@ -109,12 +101,6 @@ class AppStyle:
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
-        /* Progress bars */
-        .stProgress > div > div > div {
-            background-color: #1f77b4;
-            border-radius: 1rem;
-        }
-
         /* Tabs styling */
         .stTabs [data-baseweb="tab-list"] {
             gap: 1rem;
@@ -136,6 +122,42 @@ class AppStyle:
             color: white !important;
         }
 
+        /* Verification cards */
+        .verification-good {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        
+        .verification-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        
+        .verification-good .value,
+        .verification-warning .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .verification-good .status,
+        .verification-warning .status {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .verification-good .range,
+        .verification-warning .range {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
         /* Form inputs */
         .stTextInput input, .stNumberInput input {
             border-radius: 0.5rem;
@@ -153,37 +175,6 @@ class AppStyle:
             border-radius: 0.5rem;
             border: 1px solid #ced4da;
             padding: 0.5rem 1rem;
-        }
-
-        /* Charts */
-        .chart-container {
-            background: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Tables */
-        .dataframe {
-            border: none !important;
-            border-collapse: collapse !important;
-            width: 100% !important;
-        }
-        
-        .dataframe th {
-            background-color: #f8f9fa !important;
-            padding: 0.75rem !important;
-            font-weight: 600 !important;
-            border-bottom: 2px solid #dee2e6 !important;
-        }
-        
-        .dataframe td {
-            padding: 0.75rem !important;
-            border-bottom: 1px solid #dee2e6 !important;
-        }
-        
-        .dataframe tr:hover {
-            background-color: #f8f9fa !important;
         }
 
         /* Alerts */
@@ -243,56 +234,13 @@ class AppStyle:
             background-color: rgba(214, 39, 40, 0.1);
             color: #d62728;
         }
-        </style>
-    """
+    </style>
+    '''
 
     @staticmethod
     def apply_style():
         """Apply custom styling to the Streamlit app"""
         st.markdown(AppStyle.CUSTOM_CSS, unsafe_allow_html=True)
-
-    @staticmethod
-    def device_card(device_type, title, content):
-        """Create a styled device card"""
-        html = f"""
-        <div class="device-card">
-            <div class="device-badge device-badge-{device_type.lower()}">{device_type.upper()}</div>
-            <h3>{title}</h3>
-            <div>{content}</div>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
-
-    @staticmethod
-    def status_indicator(status):
-        """Create a status indicator"""
-        status_class = "status-active" if status else "status-inactive"
-        html = f"""
-        <div class="status-indicator {status_class}"></div>
-        <span>{status and "Active" or "Inactive"}</span>
-        """
-        st.markdown(html, unsafe_allow_html=True)
-
-    @staticmethod
-    def reading_display(value, unit):
-        """Create a styled reading display"""
-        html = f"""
-        <div class="reading-display">
-            <span>{value}</span>
-            <span style="font-size: 1rem; color: #95a5a6;">{unit}</span>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
-
-    @staticmethod
-    def alert(message, alert_type="info"):
-        """Create a styled alert"""
-        html = f"""
-        <div class="{alert_type}-alert">
-            {message}
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
 
 def apply_plot_style(fig):
     """Apply consistent styling to plotly figures"""
@@ -320,42 +268,6 @@ def apply_plot_style(fig):
     
     return fig
 
-# Usage in your app
 def init_styling():
     """Initialize all styling for the app"""
     AppStyle.apply_style()
-
-/* Verification cards */
-    .verification-good {
-        background-color: #d4edda;
-        color: #155724;
-        border-radius: 0.5rem;
-        text-align: center;
-    }
-    
-    .verification-warning {
-        background-color: #fff3cd;
-        color: #856404;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        text-align: center;
-    }
-    
-    .verification-good .value,
-    .verification-warning .value {
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-    }
-    
-    .verification-good .status,
-    .verification-warning .status {
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-    }
-    
-    .verification-good .range,
-    .verification-warning .range {
-        font-size: 0.875rem;
-        opacity: 0.8;
-    }
