@@ -82,12 +82,12 @@ class WhiteboxEZOApp:
             "📊 Dashboard",
             "🔧 Calibration",
             "📈 Analysis",
-            "📝 Logs"
+            "📝 Logs",
             "⚙️ Settings",
             "🔌 Setup"  # New tab
         ])
 
-        with tabs[5]:
+        with tabs[0]:
             self.render_dashboard()
         with tabs[1]:
             self.render_calibration()
@@ -95,6 +95,10 @@ class WhiteboxEZOApp:
             self.render_analysis()
         with tabs[3]:
             self.render_logs()
+        with tabs[4]:
+            self.render_settings()
+        with tabs[5]:
+            self.render_setup()
 
     def render_sidebar(self):
         """Render sidebar with connection controls"""
@@ -776,48 +780,104 @@ class WhiteboxEZOApp:
         st.plotly_chart(fig, use_container_width=True)
 
     def show_calibration_verification(self, slopes):
-        """Show calibration verification results"""
-        acid_slope = float(slopes[1])
-        base_slope = float(slopes[2])
-        zero_offset = float(slopes[3])
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            status = "good" if 95 <= acid_slope <= 105 else "warning"
-            AppStyle.device_card(
-                "ph",
-                "Acid Slope",
-                f"""
-                <div class="verification-{status}">
-                    {acid_slope}%
-                </div>
-                """
-            )
-        
-        with col2:
-            status = "good" if 95 <= base_slope <= 105 else "warning"
-            AppStyle.device_card(
-                "ph",
-                "Base Slope",
-                f"""
-                <div class="verification-{status}">
-                    {base_slope}%
-                </div>
-                """
-            )
-        
-        with col3:
-            status = "good" if -30 <= zero_offset <= 30 else "warning"
-            AppStyle.device_card(
-                "ph",
-                "Zero Offset",
-                f"""
-                <div class="verification-{status}">
-                    {zero_offset} mV
-                </div>
-                """
-            )
+            """Show calibration verification results for pH probe"""
+            try:
+                acid_slope = float(slopes[1])
+                base_slope = float(slopes[2])
+                zero_offset = float(slopes[3])
+                
+                st.subheader("Calibration Verification")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    status = "good" if 95 <= acid_slope <= 105 else "warning"
+                    AppStyle.device_card(
+                        "ph",
+                        "Acid Slope",
+                        f"""
+                        <div class="verification-{status}">
+                            <div class="value">{acid_slope:.1f}%</div>
+                            <div class="status">
+                                {status.upper()} 
+                                {'✓' if status == 'good' else '⚠️'}
+                            </div>
+                            <div class="range">Target: 95-105%</div>
+                        </div>
+                        """
+                    )
+                
+                with col2:
+                    status = "good" if 95 <= base_slope <= 105 else "warning"
+                    AppStyle.device_card(
+                        "ph",
+                        "Base Slope",
+                        f"""
+                        <div class="verification-{status}">
+                            <div class="value">{base_slope:.1f}%</div>
+                            <div class="status">
+                                {status.upper()}
+                                {'✓' if status == 'good' else '⚠️'}
+                            </div>
+                            <div class="range">Target: 95-105%</div>
+                        </div>
+                        """
+                    )
+                
+                with col3:
+                    status = "good" if -30 <= zero_offset <= 30 else "warning"
+                    AppStyle.device_card(
+                        "ph",
+                        "Zero Offset",
+                        f"""
+                        <div class="verification-{status}">
+                            <div class="value">{zero_offset:.1f} mV</div>
+                            <div class="status">
+                                {status.upper()}
+                                {'✓' if status == 'good' else '⚠️'}
+                            </div>
+                            <div class="range">Target: ±30mV</div>
+                        </div>
+                        """
+                    )
+
+            # Add interpretation
+            if all([95 <= acid_slope <= 105, 95 <= base_slope <= 105, -30 <= zero_offset <= 30]):
+                st.success("✅ Calibration is valid and within acceptable ranges")
+            else:
+                st.warning("""
+                ⚠️ One or more calibration parameters are outside recommended ranges.
+                Consider recalibrating the probe.
+                """)
+                
+                # Detailed recommendations
+                if acid_slope < 95 or acid_slope > 105:
+                    st.info("""
+                    **Acid Slope Issue:**
+                    - Clean probe tip
+                    - Use fresh pH 4.0 buffer
+                    - Ensure proper temperature compensation
+                    """)
+                
+                if base_slope < 95 or base_slope > 105:
+                    st.info("""
+                    **Base Slope Issue:**
+                    - Clean probe tip
+                    - Use fresh pH 10.0 buffer
+                    - Ensure proper temperature compensation
+                    """)
+                
+                if abs(zero_offset) > 30:
+                    st.info("""
+                    **Zero Offset Issue:**
+                    - Recalibrate mid-point (pH 7.0)
+                    - Check for probe damage
+                    - Consider probe replacement if persistent
+                    """)
+
+        except Exception as e:
+            st.error(f"Error processing calibration verification: {str(e)}")
+            st.info("Please ensure valid calibration data is available")
 
 def main():
     app = WhiteboxEZOApp()
