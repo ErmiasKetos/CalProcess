@@ -62,19 +62,29 @@ if 'reading_active' not in st.session_state:
 if 'last_reading_time' not in st.session_state:
     st.session_state['last_reading_time'] = None
 
+
 def list_serial_ports():
-    """List all available serial ports"""
+    """List all available serial ports with better error handling"""
     try:
         ports = list(serial.tools.list_ports.comports())
         available_ports = []
+        
+        if not ports:
+            st.warning("No serial ports found. Please check if your device is connected.")
+            return []
+            
         for port in ports:
-            st.write(f"Found port - Device: {port.device}, Description: {port.description}")
-            if "Arduino" in port.description:
-                st.write(f"Arduino detected on {port.device}")
-            available_ports.append({"port": port.device, "description": port.description})
+            # Debug output
+            st.sidebar.write(f"Detected: {port.device} - {port.description}")
+            available_ports.append({
+                "port": port.device,
+                "description": port.description,
+                "hwid": port.hwid
+            })
+            
         return available_ports
     except Exception as e:
-        st.error(f"Error listing ports: {e}")
+        st.error(f"Error listing ports: {str(e)}")
         return []
 
 def connect_to_device(port):
