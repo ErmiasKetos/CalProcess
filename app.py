@@ -3,27 +3,39 @@ import serial
 import serial.tools.list_ports
 import time
 
-# Function to list available serial ports
-
+# List available serial ports
 def list_serial_ports():
     try:
         ports = serial.tools.list_ports.comports()
+        st.write("Detected Ports: ", [port.device for port in ports])
         return [port.device for port in ports if port.device]
     except Exception as e:
         st.error(f"Error listing ports: {e}")
         return []
 
-
-# Function to establish connection with the Whitebox T1
-
+# Connect to the selected port
 def connect_to_device(port):
     try:
-        ser = serial.Serial(port, 9600, timeout=1)  # Set correct baud rate
-        time.sleep(2)  # Allow time for the device to stabilize
+        ser = serial.Serial(port, 9600, timeout=1)
+        time.sleep(2)
+        st.sidebar.success(f"Connected to {port}")
         return ser
     except Exception as e:
-        st.error(f"Failed to connect to device: {e}")
+        st.sidebar.error(f"Failed to connect: {e}")
         return None
+
+# Sidebar for port selection
+ports = list_serial_ports()
+if ports:
+    selected_port = st.sidebar.selectbox("Select Port", ports)
+    if st.sidebar.button("🔗 Connect Device"):
+        ser = connect_to_device(selected_port)
+    else:
+        ser = None
+else:
+    st.sidebar.warning("No ports available. Check your device connection.")
+    ser = None
+
 
 # Function to send a command to the device
 def send_command(ser, command):
