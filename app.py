@@ -60,7 +60,7 @@ class WhiteboxEZOApp:
         # Main title with styled header
         st.markdown("""
             <div class="main-header">
-                <h1>🧪 Whitebox EZO Calibration Hub</h1>
+                <h1>🧪 Whitebox Calibration Hub</h1>
             </div>
         """, unsafe_allow_html=True)
 
