@@ -3,193 +3,62 @@ import serial
 import serial.tools.list_ports
 import time
 
-# List available serial ports
+# Function to list available serial ports
 def list_serial_ports():
     try:
         ports = serial.tools.list_ports.comports()
-        st.write("Debug: Detected Ports", [(p.device, p.description) for p in ports])
+        st.write("Available Ports:", [(p.device, p.description) for p in ports])  # Debug output
         return [port.device for port in ports]
     except Exception as e:
         st.error(f"Error listing ports: {e}")
         return []
 
-# Connect to the selected port
+# Function to connect to the selected port
 def connect_to_device(port):
     try:
-        ser = serial.Serial(port, 9600, timeout=1)
-        time.sleep(2)  # Allow device to stabilize
-        st.sidebar.success(f"Connected to {port}")
+        ser = serial.Serial(port, 9600, timeout=1)  # Set baud rate to 9600
+        time.sleep(2)  # Allow time for Arduino to stabilize
+        st.sidebar.success(f"✅ Connected to {port}")
         return ser
     except Exception as e:
-        st.sidebar.error(f"Failed to connect: {e}")
+        st.sidebar.error(f"❌ Failed to connect: {e}")
         return None
 
-# Sidebar for device connection
+# Sidebar for port selection
 st.sidebar.title("Device Connection")
 ports = list_serial_ports()
 
-# Add COM6 as fallback if no ports detected
+# If no ports detected, force COM6
 if not ports:
     st.warning("No ports detected. Forcing COM6 as fallback.")
     ports = ["COM6"]
 
 selected_port = st.sidebar.selectbox("Select Port", ports)
 
-# Connect to device
+# Attempt to connect to the selected port
 if st.sidebar.button("🔗 Connect Device"):
     ser = connect_to_device(selected_port)
-    if ser and ser.is_open:
-        st.sidebar.success("Device connected successfully!")
-    else:
-        st.sidebar.error("Failed to open the selected port.")
 else:
     ser = None
 
-# Test command
-if ser:
-    if st.sidebar.button("🔍 Scan for EZO Devices"):
-        try:
-            ser.write("I2C,scan\r".encode())
-            time.sleep(0.5)
-            response = ser.readlines()
-            st.sidebar.info("Devices Found:\n" + "\n".join([r.decode().strip() for r in response]))
-        except Exception as e:
-            st.sidebar.error(f"Error sending command: {e}")
-
-
-
-# Sidebar for port selection
-ports = list_serial_ports()
-if ports:
-    selected_port = st.sidebar.selectbox("Select Port", ports)
-    if st.sidebar.button("🔗 Connect Device"):
-        ser = connect_to_device(selected_port)
-    else:
-        ser = None
-else:
-    st.sidebar.warning("No ports available. Check your device connection.")
-    ser = None
-
-
-# Function to send a command to the device
+# Function to send commands to the Arduino
 def send_command(ser, command):
     try:
-        ser.write((command + "\r").encode())
-        time.sleep(0.5)  # Allow time for response
-        response = ser.readlines()
+        ser.write((command + "\r").encode())  # Write command to serial
+        time.sleep(0.5)  # Wait for response
+        response = ser.readlines()  # Read response
         return [line.decode().strip() for line in response]
     except Exception as e:
         st.error(f"Error sending command: {e}")
         return []
 
-
-
-
-# Scan for connected EZO devices
-if ser and st.sidebar.button("🔍 Scan for EZO Devices"):
-    response = send_command(ser, "I2C,scan")
-    st.sidebar.info("Connected Devices:\n" + "\n".join(response))
-
-# Tabs for calibration
-tab = st.selectbox("Select Probe Type", ["pH", "EC", "Temperature", "DO"])
-
-# Dynamic reading display
+# If connected, allow the user to send commands
 if ser:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown(f"<h3>📊 {tab} Probe Current Reading</h3>", unsafe_allow_html=True)
-    current_reading = st.empty()
-
-    # Continuously fetch readings
-    for _ in range(10):  # Replace with `while True` for continuous updates
-        command = "R"  # Read command for the selected probe
-        response = send_command(ser, command)
+    if st.sidebar.button("🔍 Scan for EZO Devices"):
+        response = send_command(ser, "I2C,scan")  # Send I2C scan command
         if response:
-            reading = response[0]
-            st.markdown(f'<div class="current-reading-box">{reading}</div>', unsafe_allow_html=True)
-        time.sleep(1)
-
-# Calibration sections
-if tab == "pH":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("<h3>🧪 pH Probe Calibration</h3>", unsafe_allow_html=True)
-
-    # Temperature measurement
-    temp_col1, temp_col2 = st.columns(2)
-    with temp_col1:
-        temp = st.number_input("🌡️ Enter Calibration Temperature (°C)", value=25.0)
-    with temp_col2:
-        if st.button("Measure Temperature"):
-            temp_response = send_command(ser, "RT")
-            if temp_response:
-                temp = temp_response[0]
-                st.success(f"Measured Temperature: {temp} °C")
-
-    if st.button("Calibrate pH 7 (Mid)", key="ph_mid"):
-        response = send_command(ser, "ph:cal,mid,7")
-        st.success(" ".join(response))
-    if st.button("Calibrate pH 4 (Low)", key="ph_low"):
-        response = send_command(ser, "ph:cal,low,4")
-        st.success(" ".join(response))
-    if st.button("Calibrate pH 10 (High)", key="ph_high"):
-        response = send_command(ser, "ph:cal,high,10")
-        st.success(" ".join(response))
-
-    if st.button("Retrieve Slope Data"):
-        slope_response = send_command(ser, "Slope,?")
-        st.info(" ".join(slope_response))
-
-    if st.button("❌ Clear Calibration", key="ph_clear"):
-        response = send_command(ser, "ph:cal,clear")
-        st.warning(" ".join(response))
-    st.markdown("</div>", unsafe_allow_html=True)
-
-elif tab == "EC":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("<h3>🌊 EC Probe Calibration</h3>", unsafe_allow_html=True)
-
-    k_value = st.selectbox("Select K Value", ["0.1", "1.0", "10.0"])
-    if st.button(f"Set K Value to {k_value}"):
-        response = send_command(ser, f"ec:k,{k_value}")
-        st.success(" ".join(response))
-
-    if st.button("Dry Calibration"):
-        response = send_command(ser, "ec:cal,dry")
-        st.success(" ".join(response))
-
-    if k_value == "0.1":
-        if st.button("Calibrate 84µS"):
-            response = send_command(ser, "ec:cal,low,84")
-            st.success(" ".join(response))
-        if st.button("Calibrate 1413µS"):
-            response = send_command(ser, "ec:cal,high,1413")
-            st.success(" ".join(response))
-    if st.button("❌ Clear Calibration"):
-        response = send_command(ser, "ec:cal,clear")
-        st.warning(" ".join(response))
-    st.markdown("</div>", unsafe_allow_html=True)
-
-elif tab == "Temperature":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("<h3>🌡️ Temperature Calibration</h3>", unsafe_allow_html=True)
-    temp_value = st.number_input("🌡️ Enter Calibration Temperature (°C)", value=25.0)
-    if st.button("Calibrate Temperature"):
-        response = send_command(ser, f"RTD:cal,{temp_value}")
-        st.success(" ".join(response))
-    if st.button("❌ Clear Calibration"):
-        response = send_command(ser, "RTD:cal,clear")
-        st.warning(" ".join(response))
-    st.markdown("</div>", unsafe_allow_html=True)
-
-elif tab == "DO":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("<h3>🌬️ DO Probe Calibration</h3>", unsafe_allow_html=True)
-    if st.button("Calibrate to Air"):
-        response = send_command(ser, "do:cal")
-        st.success(" ".join(response))
-    if st.button("Calibrate Zero DO"):
-        response = send_command(ser, "do:cal,0")
-        st.success(" ".join(response))
-    if st.button("❌ Clear Calibration"):
-        response = send_command(ser, "do:cal,clear")
-        st.warning(" ".join(response))
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.sidebar.info("Devices Found:\n" + "\n".join(response))
+        else:
+            st.sidebar.warning("No devices detected.")
+else:
+    st.sidebar.warning("Connect to a device to send commands.")
