@@ -9,10 +9,11 @@ def list_serial_ports():
     return [port.device for port in ports]
 
 # Function to establish connection with the Whitebox T1
+
 def connect_to_device(port):
     try:
-        ser = serial.Serial(port, 9600, timeout=1)
-        time.sleep(2)  # Allow connection to stabilize
+        ser = serial.Serial(port, 9600, timeout=1)  # Set correct baud rate
+        time.sleep(2)  # Allow time for the device to stabilize
         return ser
     except Exception as e:
         st.error(f"Failed to connect to device: {e}")
