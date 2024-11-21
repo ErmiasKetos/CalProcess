@@ -41,25 +41,26 @@ def pH_calibration():
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        mid_value = st.number_input("Mid Calibration (pH 7.00)", value=7.00, step=0.01)
+        mid_value = st.number_input("Mid Calibration (pH 7.00)", value=7.00, step=0.01, key="mid_value_input")
     with col2:
-        low_value = st.number_input("Low Calibration (pH 4.00)", value=4.00, step=0.01)
+        low_value = st.number_input("Low Calibration (pH 4.00)", value=4.00, step=0.01, key="low_value_input")
     with col3:
-        high_value = st.number_input("High Calibration (pH 10.00)", value=10.00, step=0.01)
+        high_value = st.number_input("High Calibration (pH 10.00)", value=10.00, step=0.01, key="high_value_input")
 
     col1, col2, col3, col4 = st.columns(4)
-    if col1.button("Calibrate Mid (pH 7)"):
+    if col1.button("Calibrate Mid (pH 7)", key="calibrate_mid_button"):
         response = send_command(ser, f"Cal,mid,{mid_value}")
         st.success("Response: " + str(response))
-    if col2.button("Calibrate Low (pH 4)"):
+    if col2.button("Calibrate Low (pH 4)", key="calibrate_low_button"):
         response = send_command(ser, f"Cal,low,{low_value}")
         st.success("Response: " + str(response))
-    if col3.button("Calibrate High (pH 10)"):
+    if col3.button("Calibrate High (pH 10)", key="calibrate_high_button"):
         response = send_command(ser, f"Cal,high,{high_value}")
         st.success("Response: " + str(response))
-    if col4.button("Get Slope"):
+    if col4.button("Get Slope", key="get_slope_button"):
         slope_response = send_command(ser, "Slope,?")
         st.info("Slope Values: " + str(slope_response))
+
 
 # EC Calibration
 def EC_calibration():
