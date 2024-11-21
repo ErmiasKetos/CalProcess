@@ -843,43 +843,43 @@ class WhiteboxEZOApp:
                         """
                     )
 
-            # Add interpretation
-            if all([95 <= acid_slope <= 105, 95 <= base_slope <= 105, -30 <= zero_offset <= 30]):
-                st.success("✅ Calibration is valid and within acceptable ranges")
-            else:
-                st.warning("""
-                ⚠️ One or more calibration parameters are outside recommended ranges.
-                Consider recalibrating the probe.
-                """)
-                
-                # Detailed recommendations
-                if acid_slope < 95 or acid_slope > 105:
-                    st.info("""
-                    **Acid Slope Issue:**
-                    - Clean probe tip
-                    - Use fresh pH 4.0 buffer
-                    - Ensure proper temperature compensation
+                # Add interpretation
+                if all([95 <= acid_slope <= 105, 95 <= base_slope <= 105, -30 <= zero_offset <= 30]):
+                    st.success("✅ Calibration is valid and within acceptable ranges")
+                else:
+                    st.warning("""
+                    ⚠️ One or more calibration parameters are outside recommended ranges.
+                    Consider recalibrating the probe.
                     """)
-                
-                if base_slope < 95 or base_slope > 105:
-                    st.info("""
-                    **Base Slope Issue:**
-                    - Clean probe tip
-                    - Use fresh pH 10.0 buffer
-                    - Ensure proper temperature compensation
-                    """)
-                
-                if abs(zero_offset) > 30:
-                    st.info("""
-                    **Zero Offset Issue:**
-                    - Recalibrate mid-point (pH 7.0)
-                    - Check for probe damage
-                    - Consider probe replacement if persistent
-                    """)
-
-        except Exception as e:
-            st.error(f"Error processing calibration verification: {str(e)}")
-            st.info("Please ensure valid calibration data is available")
+                    
+                    # Detailed recommendations
+                    if acid_slope < 95 or acid_slope > 105:
+                        st.info("""
+                        **Acid Slope Issue:**
+                        - Clean probe tip
+                        - Use fresh pH 4.0 buffer
+                        - Ensure proper temperature compensation
+                        """)
+                    
+                    if base_slope < 95 or base_slope > 105:
+                        st.info("""
+                        **Base Slope Issue:**
+                        - Clean probe tip
+                        - Use fresh pH 10.0 buffer
+                        - Ensure proper temperature compensation
+                        """)
+                    
+                    if abs(zero_offset) > 30:
+                        st.info("""
+                        **Zero Offset Issue:**
+                        - Recalibrate mid-point (pH 7.0)
+                        - Check for probe damage
+                        - Consider probe replacement if persistent
+                        """)
+    
+            except Exception as e:
+                st.error(f"Error processing calibration verification: {str(e)}")
+                st.info("Please ensure valid calibration data is available")
 
 def main():
     app = WhiteboxEZOApp()
