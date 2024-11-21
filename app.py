@@ -14,6 +14,7 @@ def list_serial_ports():
         return []
 
 # Connect to the selected port
+
 def connect_to_device(port):
     try:
         ser = serial.Serial(port, 9600, timeout=1)
@@ -23,6 +24,12 @@ def connect_to_device(port):
     except Exception as e:
         st.sidebar.error(f"Failed to connect: {e}")
         return None
+
+# Attempt to connect
+ser = connect_to_device("COM6")
+if ser and ser.is_open:
+    st.sidebar.success("Connected to COM6!")
+
 
 # Sidebar for port selection
 ports = list_serial_ports()
