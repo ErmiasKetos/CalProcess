@@ -1,49 +1,12 @@
 import streamlit as st
 import serial
-import serial.tools.list_ports
+import sys
 import time
 import threading
 from datetime import datetime
 from collections import deque
 from connection_handler import ConnectionHandler
 from ui_components import ProbeUI
-
-def get_available_ports():
-    """Get list of available COM ports"""
-    ports = []
-    try:
-        # List all COM ports
-        port_list = serial.tools.list_ports.comports()
-        st.sidebar.write("Detecting available ports...")
-        
-        if not port_list:
-            st.sidebar.warning("No COM ports detected!")
-        else:
-            for port in port_list:
-                st.sidebar.write(f"Found: {port.device} - {port.description}")
-                ports.append(port.device)
-    except Exception as e:
-        st.sidebar.error(f"Error detecting ports: {str(e)}")
-    
-    return ports
-
-def verify_port(port):
-    """Verify if a port exists and is available"""
-    try:
-        # Check if port is in available ports list
-        available_ports = get_available_ports()
-        if port not in available_ports:
-            st.sidebar.error(f"Port {port} not found in available ports!")
-            st.sidebar.info("Available ports: " + ", ".join(available_ports))
-            return False
-            
-        # Try to open the port
-        ser = serial.Serial(port, 9600, timeout=1)
-        ser.close()
-        return True
-    except Exception as e:
-        st.sidebar.error(f"Error verifying port: {str(e)}")
-        return False
 
 def initialize_session_state():
     if 'serial_connection' not in st.session_state:
@@ -60,26 +23,69 @@ def initialize_session_state():
             'RTD': deque(maxlen=100),
             'timestamps': deque(maxlen=100)
         }
-    if 'connection_handler' not in st.session_state:
-        st.session_state['connection_handler'] = ConnectionHandler()
-    if 'ui' not in st.session_state:
-        st.session_state['ui'] = ProbeUI()
-    if 'available_ports' not in st.session_state:
-        st.session_state['available_ports'] = []
+
+def connect_serial(port_name):
+    """Establish serial connection with enhanced error handling"""
+    try:
+        # Format port name for Windows
+        if port_name.startswith('COM'):
+            port_name = f'\\\\.\{port_name}'
+            
+        # Try to establish connection
+        ser = serial.Serial(
+            port=port_name,
+            baudrate=9600,
+            timeout=1,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            bytesize=serial.EIGHTBITS
+        )
+        
+        # Wait for connection to stabilize
+        time.sleep(2)
+        
+        # Test communication
+        ser.write(b"i\r")
+        time.sleep(0.5)
+        
+        if ser.in_waiting:
+            response = ser.readline().decode().strip()
+            st.sidebar.success(f"Connected to {port_name}")
+            st.sidebar.info(f"Device response: {response}")
+            return ser
+        else:
+            ser.close()
+            st.sidebar.error("No response from device")
+            return None
+            
+    except serial.SerialException as e:
+        st.sidebar.error(f"Serial Error: {str(e)}")
+        return None
+    except Exception as e:
+        st.sidebar.error(f"Connection Error: {str(e)}")
+        return None
 
 def serial_listener(ser, probe_type):
-    """Background thread for serial monitoring"""
+    """Monitor serial port for readings"""
     while st.session_state['listening']:
         try:
-            if ser.in_waiting > 0:
-                serial_string = ser.readline()
+            if ser.in_waiting:
+                # Send read command
+                ser.write(b"R\r")
+                time.sleep(0.1)
+                
+                # Read response
+                response = ser.readline().decode().strip()
+                
                 try:
-                    value = float(serial_string.decode('ASCII').strip())
+                    value = float(response)
                     st.session_state['readings'][probe_type].append(value)
                     st.session_state['readings']['timestamps'].append(datetime.now())
                 except ValueError:
                     continue
-            time.sleep(0.1)
+                    
+            time.sleep(0.5)  # Poll every 500ms
+            
         except Exception as e:
             st.error(f"Reading error: {str(e)}")
             st.session_state['listening'] = False
@@ -99,80 +105,91 @@ def main():
     # Sidebar - Connection
     st.sidebar.title("Device Connection")
     
-    # Refresh ports button
-    if st.sidebar.button("🔄 Refresh Ports"):
-        st.session_state['available_ports'] = get_available_ports()
+    # Port input
+    port_name = st.sidebar.text_input(
+        "Enter COM port:",
+        value="COM8",
+        help="Example: COM8"
+    )
 
-    # Port selection
-    if not st.session_state['available_ports']:
-        st.session_state['available_ports'] = get_available_ports()
-
-    if st.session_state['available_ports']:
-        port_selected = st.sidebar.selectbox(
-            "Select Port",
-            options=st.session_state['available_ports']
-        )
-    else:
-        port_selected = st.sidebar.text_input(
-            "Enter port manually:",
-            value="COM6",
-            help="No ports detected. Enter manually if you know the port."
-        )
-
-    col1, col2, col3 = st.sidebar.columns(3)
+    col1, col2 = st.sidebar.columns(2)
     
-    try:
-        with col1:
-            if st.button('🔗 Connect', key='connect'):
-                if verify_port(port_selected):
-                    try:
-                        ser = serial.Serial(
-                            port=port_selected,
-                            baudrate=9600,
-                            bytesize=8,
-                            timeout=2,
-                            stopbits=serial.STOPBITS_ONE
+    with col1:
+        if st.button('🔗 Connect'):
+            ser = connect_serial(port_name)
+            if ser:
+                st.session_state['serial_connection'] = ser
+                st.session_state['program_running'] = True
+    
+    with col2:
+        if st.button('❌ Disconnect'):
+            if st.session_state['serial_connection']:
+                st.session_state['listening'] = False
+                time.sleep(0.5)
+                st.session_state['serial_connection'].close()
+                st.session_state['serial_connection'] = None
+                st.session_state['program_running'] = False
+                st.sidebar.success("Disconnected")
+
+    # Main content
+    if st.session_state['serial_connection']:
+        tab_monitor, tab_cal = st.tabs(["📊 Monitor", "🔧 Calibration"])
+
+        # Monitoring Tab
+        with tab_monitor:
+            st.subheader("Live Readings")
+            
+            probe_type = st.selectbox(
+                "Select Probe",
+                ["pH", "EC", "DO", "RTD"]
+            )
+
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button('▶️ Start Reading'):
+                    if not st.session_state['listening']:
+                        st.session_state['listening'] = True
+                        thread = threading.Thread(
+                            target=serial_listener,
+                            args=(st.session_state['serial_connection'], probe_type)
                         )
-                        st.session_state['serial_connection'] = ser
-                        st.session_state['program_running'] = True
-                        st.sidebar.success(f"Connected to {port_selected}")
-                    except Exception as e:
-                        st.sidebar.error(f"Connection failed: {str(e)}")
-                else:
-                    st.sidebar.error("Please select a valid port")
-
-        # Rest of the code remains the same...
-        
-        with col2:
-            if st.button('⏹️ Stop', key='stop'):
-                if st.session_state['serial_connection']:
+                        thread.daemon = True
+                        thread.start()
+            
+            with col2:
+                if st.button('⏹️ Stop Reading'):
                     st.session_state['listening'] = False
+
+            # Display current reading
+            if st.session_state['readings'][probe_type]:
+                current_value = list(st.session_state['readings'][probe_type])[-1]
+                st.markdown(
+                    f"""
+                    <div style="padding: 20px; border-radius: 10px; background-color: #f0f2f6;">
+                        <h3>{probe_type} Reading</h3>
+                        <h2 style="color: #0066cc;">{current_value:.3f}</h2>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        # Calibration Tab
+        with tab_cal:
+            st.subheader("Probe Calibration")
+            
+            probe_type = st.selectbox(
+                "Select Probe for Calibration",
+                ["pH", "EC", "DO", "RTD"],
+                key='cal_select'
+            )
+
+            if probe_type == "pH":
+                if st.button("Calibrate pH 7 (Mid)"):
+                    st.session_state['serial_connection'].write(b"cal,mid,7\r")
                     time.sleep(0.5)
-                    st.session_state['serial_connection'].close()
-                    st.sidebar.success("Stopped monitoring")
-
-        with col3:
-            if st.button('❌ Exit', key='exit'):
-                if st.session_state['serial_connection']:
-                    st.session_state['listening'] = False
-                    st.session_state['program_running'] = False
-                    time.sleep(0.5)
-                    st.session_state['serial_connection'].close()
-                    st.session_state['serial_connection'] = None
-                st.sidebar.success("Connection closed")
-
-        # Main content remains the same...
-        if st.session_state['serial_connection']:
-            # ... rest of the code ...
-            pass
-
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        if st.session_state['serial_connection']:
-            st.session_state['serial_connection'].close()
-            st.session_state['serial_connection'] = None
-        st.session_state['listening'] = False
-        st.session_state['program_running'] = False
+                    response = st.session_state['serial_connection'].readline().decode()
+                    st.success(f"Calibration response: {response}")
 
 if __name__ == "__main__":
     main()
