@@ -17,13 +17,17 @@ def list_serial_ports():
 
 def connect_to_device(port):
     try:
+        if 'ser' in st.session_state and st.session_state['ser'].is_open:
+            return st.session_state['ser']  # Reuse existing connection
         ser = serial.Serial(port, 9600, timeout=1)
+        st.session_state['ser'] = ser
         time.sleep(2)
         st.sidebar.success(f"Connected to {port}")
         return ser
     except Exception as e:
         st.sidebar.error(f"Failed to connect: {e}")
         return None
+
 
 # Attempt to connect
 ser = connect_to_device("COM6")
