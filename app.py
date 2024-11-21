@@ -82,20 +82,8 @@ def send_command(ser, command):
         st.error(f"Error sending command: {e}")
         return []
 
-# Sidebar for device connection
-st.sidebar.title("Device Connection")
-ports = list_serial_ports()
-selected_port = st.sidebar.selectbox("Select Port", ports)
 
-# Connect to device
-if st.sidebar.button("🔗 Connect Device"):
-    ser = connect_to_device(selected_port)
-    if ser:
-        st.sidebar.success("✅ Connected to Device!")
-    else:
-        st.sidebar.error("❌ Connection Failed")
-else:
-    ser = None
+
 
 # Scan for connected EZO devices
 if ser and st.sidebar.button("🔍 Scan for EZO Devices"):
