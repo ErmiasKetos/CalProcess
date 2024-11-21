@@ -6,6 +6,10 @@ from datetime import datetime
 import plotly.graph_objects as go
 import json
 from pathlib import Path
+from styles import AppStyle, apply_plot_style, init_styling
+
+def main():
+    init_styling()
 
 class WhiteboxEZOApp:
     DEFAULT_ADDRESSES = {
