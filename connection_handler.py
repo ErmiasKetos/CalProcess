@@ -43,35 +43,34 @@ class ConnectionHandler:
             logger.debug(f"Port {port} check failed: {str(e)}")
             return None
 
-    def get_potential_ports(self):
-        """Get list of potential ports based on OS"""
-        system = platform.system()
-        
-        if system == "Windows":
-            return [f"COM{i}" for i in range(1, 21)]
-            
-        elif system == "Linux":
-            from glob import glob
-            patterns = ["/dev/ttyUSB*", "/dev/ttyACM*", "/dev/ttyS*"]
-            ports = []
-            for pattern in patterns:
-                ports.extend(glob(pattern))
-            return ports
-            
-        elif system == "Darwin":  # macOS
-            from glob import glob
-            patterns = [
-                "/dev/tty.usbserial*",
-                "/dev/tty.usbmodem*",
-                "/dev/cu.usbserial*",
-                "/dev/cu.usbmodem*"
-            ]
-            ports = []
-            for pattern in patterns:
-                ports.extend(glob(pattern))
-            return ports
-            
+    def scan_ports(self):
+    """Scan all potential ports in parallel"""
+    potential_ports = self.get_potential_ports()
+    available_ports = []
+    
+    if not potential_ports:
         return []
+        
+    progress_text = "Scanning ports..."
+    progress_bar = st.sidebar.progress(0)
+    
+    # Ensure at least 1 worker, maximum 4 workers
+    max_workers = min(max(1, len(potential_ports)), 4)
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(self.check_port, port): port 
+                  for port in potential_ports}
+        
+        for i, future in enumerate(as_completed(futures)):
+            progress = (i + 1) / len(potential_ports)
+            progress_bar.progress(progress)
+            
+            result = future.result()
+            if result:
+                available_ports.append(result)
+    
+    progress_bar.empty()
+    return available_ports
 
     def scan_ports(self):
         """Scan all potential ports in parallel"""
