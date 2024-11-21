@@ -1,184 +1,184 @@
 import streamlit as st
-import serial
-import serial.tools.list_ports
 import time
 
-# Helper function to get available serial ports
-def list_serial_ports():
-    ports = serial.tools.list_ports.comports()
-    return [port.device for port in ports]
-
-# Function to send a command to the device
-def send_command(command):
-    # Simulate sending a command (replace with actual serial communication if needed)
-    time.sleep(0.5)  # Simulate delay
-    return f"Command sent: {command}"
-
-# CSS for styling
-st.markdown(
-    """
+# CSS for Tailwind-like styling
+st.markdown("""
     <style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-    }
-    .card {
-        background-color: white;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-radius: 10px;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .card h3 {
-        margin-top: 0;
-    }
-    .btn {
-        background-color: #007bff;
-        color: white;
-        padding: 10px 15px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    .btn:hover {
-        background-color: #0056b3;
-    }
-    .btn-destructive {
-        background-color: #dc3545;
-        color: white;
-    }
-    .btn-destructive:hover {
-        background-color: #b52b37;
-    }
-    .tabs {
-        display: flex;
-        gap: 10px;
-    }
-    .tabs button {
-        flex: 1;
-        padding: 10px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        background-color: #f1f1f1;
-    }
-    .tabs button.active {
-        background-color: #007bff;
-        color: white;
-    }
-    .tab-content {
-        margin-top: 20px;
-    }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .btn {
+            background-color: #1d4ed8;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background-color: #1e40af;
+        }
+        .btn-destructive {
+            background-color: #dc2626;
+            color: white;
+        }
+        .btn-destructive:hover {
+            background-color: #b91c1c;
+        }
+        .input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+        .select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .status {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tabs button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #e5e7eb;
+        }
+        .tabs button.active {
+            background-color: #1d4ed8;
+            color: white;
+        }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
-# Main Streamlit App
-st.title("Atlas Scientific Probe Calibration")
+# State management for device connection and calibration status
+if "connected" not in st.session_state:
+    st.session_state.connected = False
+if "status" not in st.session_state:
+    st.session_state.status = ""
 
-# Connection Status
-connection_status = st.sidebar.empty()
-connected = st.sidebar.button("Connect Device")
+# Connect to device
+def connect_device():
+    st.session_state.connected = True
+    st.session_state.status = "Connected to device"
 
-if connected:
-    connection_status.success("Device Connected!")
-else:
-    connection_status.info("Device Not Connected")
+# Send command simulation
+def send_command(command):
+    time.sleep(0.5)  # Simulate a delay
+    st.session_state.status = f"Command sent: {command}"
 
-# Tabs for probe calibration
-tab = st.selectbox("Select Probe Type", ["pH", "EC", "Temperature", "DO"])
+# Tabs for selecting probes
+st.markdown("<div class='container'>", unsafe_allow_html=True)
+st.markdown("<h1>Atlas Scientific Probe Calibration</h1>", unsafe_allow_html=True)
 
-# pH Calibration
-if tab == "pH":
+tabs = st.tabs(["pH", "EC", "Temperature", "DO"])
+
+# pH Calibration Tab
+with tabs[0]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("<h3>pH Probe Calibration</h3>", unsafe_allow_html=True)
-    st.write(f"Current Reading: {'No reading' if not connected else '7.00'}")
+    st.markdown(f"<p class='status'>Current Reading: {'7.00' if st.session_state.connected else 'No reading'}</p>", unsafe_allow_html=True)
 
     if st.button("Calibrate pH 7 (Mid)"):
-        response = send_command("ph:cal,mid,7")
-        st.write(response)
+        send_command("ph:cal,mid,7")
     if st.button("Calibrate pH 4 (Low)"):
-        response = send_command("ph:cal,low,4")
-        st.write(response)
+        send_command("ph:cal,low,4")
     if st.button("Calibrate pH 10 (High)"):
-        response = send_command("ph:cal,high,10")
-        st.write(response)
+        send_command("ph:cal,high,10")
     if st.button("Clear pH Calibration", key="clear_ph"):
-        response = send_command("ph:cal,clear")
-        st.write(response)
+        send_command("ph:cal,clear")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# EC Calibration
-elif tab == "EC":
+# EC Calibration Tab
+with tabs[1]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("<h3>EC Probe Calibration</h3>", unsafe_allow_html=True)
-    st.write(f"Current Reading: {'No reading' if not connected else '1.413mS'}")
+    st.markdown(f"<p class='status'>Current Reading: {'1.413mS' if st.session_state.connected else 'No reading'}</p>", unsafe_allow_html=True)
 
     selected_k_value = st.selectbox("Select K Value", ["0.1", "1.0", "10.0"])
     if st.button("Set K Value"):
-        response = send_command(f"ec:k,{selected_k_value}")
-        st.write(response)
+        send_command(f"ec:k,{selected_k_value}")
 
     if st.button("Dry Calibration"):
-        response = send_command("ec:cal,dry")
-        st.write(response)
+        send_command("ec:cal,dry")
 
     if selected_k_value == "0.1":
         if st.button("Calibrate 84µS"):
-            response = send_command("ec:cal,low,84")
-            st.write(response)
+            send_command("ec:cal,low,84")
         if st.button("Calibrate 1413µS"):
-            response = send_command("ec:cal,high,1413")
-            st.write(response)
+            send_command("ec:cal,high,1413")
     elif selected_k_value == "1.0":
         if st.button("Calibrate 12880µS"):
-            response = send_command("ec:cal,low,12880")
-            st.write(response)
+            send_command("ec:cal,low,12880")
         if st.button("Calibrate 80000µS"):
-            response = send_command("ec:cal,high,80000")
-            st.write(response)
+            send_command("ec:cal,high,80000")
     elif selected_k_value == "10.0":
         if st.button("Calibrate 12880µS"):
-            response = send_command("ec:cal,low,12880")
-            st.write(response)
+            send_command("ec:cal,low,12880")
         if st.button("Calibrate 150000µS"):
-            response = send_command("ec:cal,high,150000")
-            st.write(response)
+            send_command("ec:cal,high,150000")
 
     if st.button("Clear EC Calibration"):
-        response = send_command("ec:cal,clear")
-        st.write(response)
+        send_command("ec:cal,clear")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Temperature Calibration
-elif tab == "Temperature":
+# Temperature Calibration Tab
+with tabs[2]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("<h3>Temperature Probe Calibration</h3>", unsafe_allow_html=True)
-    st.write(f"Current Reading: {'No reading' if not connected else '25.0°C'}")
+    st.markdown(f"<p class='status'>Current Reading: {'25.0°C' if st.session_state.connected else 'No reading'}</p>", unsafe_allow_html=True)
 
     custom_temp = st.number_input("Enter Calibration Temperature", value=25.0)
     if st.button("Calibrate Temperature"):
-        response = send_command(f"rtd:cal,{custom_temp}")
-        st.write(response)
+        send_command(f"rtd:cal,{custom_temp}")
     if st.button("Clear Temperature Calibration"):
-        response = send_command("rtd:cal,clear")
-        st.write(response)
+        send_command("rtd:cal,clear")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# DO Calibration
-elif tab == "DO":
+# DO Calibration Tab
+with tabs[3]:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("<h3>DO Probe Calibration</h3>", unsafe_allow_html=True)
-    st.write(f"Current Reading: {'No reading' if not connected else '8.00mg/L'}")
+    st.markdown(f"<p class='status'>Current Reading: {'8.00mg/L' if st.session_state.connected else 'No reading'}</p>", unsafe_allow_html=True)
 
     if st.button("Calibrate to Air"):
-        response = send_command("do:cal")
-        st.write(response)
+        send_command("do:cal")
     if st.button("Calibrate Zero DO"):
-        response = send_command("do:cal,0")
-        st.write(response)
+        send_command("do:cal,0")
     if st.button("Clear DO Calibration"):
-        response = send_command("do:cal,clear")
-        st.write(response)
+        send_command("do:cal,clear")
     st.markdown("</div>", unsafe_allow_html=True)
+
+# Device Connection Button
+st.sidebar.button("Connect Device", on_click=connect_device)
+st.sidebar.write(f"Status: {st.session_state.status}")
+
+st.markdown("</div>", unsafe_allow_html=True)
