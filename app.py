@@ -5,6 +5,26 @@ from datetime import datetime
 from collections import deque
 import pandas as pd
 from ezo_components import EZOHandler, EZOUI
+import streamlit as st
+import serial
+import serial.tools.list_ports
+
+# List available COM ports
+ports = [port.device for port in serial.tools.list_ports.comports()]
+
+# Let the user select the COM port
+selected_port = st.selectbox("Select COM Port", ports)
+
+try:
+    # Open the selected COM port
+    ser = serial.Serial(selected_port, 9600, timeout=1)
+    st.success(f"Successfully connected to {selected_port}")
+    
+    # Your code to interact with the device goes here
+    
+except serial.SerialException as e:
+    st.error(f"Error: {e}")
+    st.info("Please make sure the device is connected and the correct port is selected.")
 
 def initialize_session_state():
     """Initialize all session state variables"""
