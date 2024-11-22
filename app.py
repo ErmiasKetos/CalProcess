@@ -9,6 +9,14 @@ import streamlit as st
 import serial
 import serial.tools.list_ports
 
+
+try:
+    import serial
+    # Your serial communication code here
+except ImportError:
+    st.error("Serial communication is not available in this environment.")
+    st.info("This app requires local hardware access and cannot run on Streamlit Cloud.")
+
 # List available COM ports
 ports = [port.device for port in serial.tools.list_ports.comports()]
 
